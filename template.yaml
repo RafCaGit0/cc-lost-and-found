@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: NYCU Lost and Found Backend API
+
+Parameters:
+  UserPoolId:
+    Type: String
+    Description: The Cognito User Pool ID
+  BucketName:
+    Type: String
+    Description: The S3 bucket name for images
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 10
+    MemorySize: 128
+    Environment:
+      Variables:
+        USER_POOL_ID: !Ref UserPoolId
+        BUCKET_NAME: !Ref BucketName
+
+Resources:
+  # The API Gateway REST API
+  LostAndFoundApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
+
+  # Common IAM Role for all Lambdas
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LostAndFoundPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Items"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "arn:aws:s3:::${BucketName}/*"
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub "arn:aws:s3:::${BucketName}"
+              - Effect: Allow
+                Action:
+                  - cognito-idp:ListUsers
+                  - cognito-idp:AdminAddUserToGroup
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "arn:aws:logs:*:*:*"
+
+  # Lambda Functions
+  GetItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: get_items.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items
+            Method: get
+
+  GetItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: get_item.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/{id}
+            Method: get
+
+  CreateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: create_item.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items
+            Method: post
+
+  UpdateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: update_item.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/{id}
+            Method: put
+
+  DeleteItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: delete_item.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/{id}
+            Method: delete
+
+  ResolveItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: resolve_item.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/{id}/resolve
+            Method: post
+
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: get_upload_url.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/upload-url
+            Method: post
+
+  AdminListUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: admin_list_users.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /admin/users
+            Method: get
+
+  AdminPromoteUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: admin_promote_user.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /admin/promote
+            Method: post
+
+  # Pre-signup Lambda (attached to Cognito, not API Gateway)
+  PreSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: pre_signup.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  # Permission for Cognito to invoke the pre-signup Lambda
+  PreSignupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PreSignupFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${LostAndFoundApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  PreSignupFunctionArn:
+    Description: "Attach this ARN as the Pre sign-up trigger in Cognito"
+    Value: !GetAtt PreSignupFunction.Arn
