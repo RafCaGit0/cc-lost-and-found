@@ -38,3 +38,13 @@ venv
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AWS Amplify config (contains pool IDs, API URLs)
++src/aws-exports.js
++amplify-config.js
+
+# build output
+dist/
+
+# admin scripts with secrets
+scripts/secrets*
