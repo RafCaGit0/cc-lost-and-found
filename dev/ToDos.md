@@ -136,3 +136,14 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - [ ] **Search/Filter:** Add filter bar to Home feed (by location, postType, status)
 - [ ] **Campus Map:** Leaflet.js map, plot item pins by location value
 - [ ] **S3 Lifecycle Rule:** Delete untagged objects older than 7 days to clean up orphaned uploads
+
+---
+
+## Phase 5 — Post-Launch Hardening (MVP-Friendly)
+
+- [ ] **Operational hygiene**: Confirm Amplify env vars are set (`VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID`) and add a simple "health check" endpoint to verify API + auth.
+- [ ] **Abuse guardrails**: Add a soft image size cap in the client (e.g., 5–10MB) and show a friendly error; log oversize attempts server-side.
+- [ ] **Visibility & audit**: Log `sub` and email on write actions (create, resolve, delete) so you can trace misuse.
+- [ ] **Basic rate limiting**: Add an API Gateway usage plan or WAF rule with conservative limits (mostly click-ops, no code).
+- [ ] **Email privacy**: Replace mailto with a "contact requester" modal that reveals email only after user intent.
+- [ ] **Backup & retention**: Turn on DynamoDB PITR and set S3 lifecycle rules to expire unused images after N days.
