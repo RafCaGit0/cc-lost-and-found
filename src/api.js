@@ -1,0 +1,96 @@
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+async function getHeaders() {
+  try {
+    // In Amplify v6, this gets the current valid session tokens automatically
+    const session = await fetchAuthSession();
+    return {
+      'Authorization': session.tokens.idToken.toString(),
+      'Content-Type': 'application/json'
+    };
+  } catch (err) {
+    console.error("No active session", err);
+    throw new Error("Authentication required");
+  }
+}
+
+export async function getItems(postType) {
+  const headers = await getHeaders();
+  let url = `${API_URL}/items`;
+  if (postType) {
+    url += `?postType=${postType}`;
+  }
+  
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  return res.json();
+}
+
+export async function createItem(data, imageFile) {
+  const headers = await getHeaders();
+  
+  let imageKey = null;
+  
+  // Phase 1: Upload image to S3 if provided
+  if (imageFile) {
+    // 1a. Request pre-signed URL from our Lambda
+    const urlRes = await fetch(`${API_URL}/items/upload-url`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ contentType: imageFile.type })
+    });
+    
+    if (!urlRes.ok) throw new Error("Failed to get secure upload URL");
+    const { uploadUrl, imageKey: newKey } = await urlRes.json();
+    
+    // 1b. Put the file directly into the S3 bucket
+    const s3Res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': imageFile.type
+      },
+      body: imageFile
+    });
+    
+    if (!s3Res.ok) throw new Error("Failed to upload image to S3");
+    imageKey = newKey;
+  }
+  
+  // Phase 2: Save the item data (with the imageKey) to DynamoDB
+  const payload = { ...data };
+  if (imageKey) payload.imageKey = imageKey;
+  
+  const res = await fetch(`${API_URL}/items`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload)
+  });
+  
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function resolveItem(id) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/items/${id}/resolve`, {
+    method: 'POST',
+    headers
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteItem(id) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/items/${id}`, {
+    method: 'DELETE',
+    headers
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
