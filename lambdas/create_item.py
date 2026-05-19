@@ -2,12 +2,19 @@ import json
 import boto3
 import time
 import uuid
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('Items')
 
 def get_cors_headers():
     return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type,Authorization"}
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
     try:
@@ -21,6 +28,8 @@ def lambda_handler(event, context):
         title = body.get('title')
         description = body.get('description', '')
         image_key = body.get('imageKey')
+        lat = body.get('lat')
+        lng = body.get('lng')
         
         if post_type not in ['FOUND', 'LOST']: return {"statusCode": 400, "headers": get_cors_headers(), "body": json.dumps({"error": "Invalid postType"})}
         
@@ -48,8 +57,11 @@ def lambda_handler(event, context):
             'updatedAt': timestamp
         }
         if image_key: item['imageKey'] = image_key
+        if lat is not None and lng is not None:
+            item['lat'] = Decimal(str(lat))
+            item['lng'] = Decimal(str(lng))
         
         table.put_item(Item=item)
-        return {"statusCode": 201, "headers": get_cors_headers(), "body": json.dumps(item)}
+        return {"statusCode": 201, "headers": get_cors_headers(), "body": json.dumps(item, cls=DecimalEncoder)}
     except Exception as e:
         return {"statusCode": 500, "headers": get_cors_headers(), "body": json.dumps({"error": str(e)})}
