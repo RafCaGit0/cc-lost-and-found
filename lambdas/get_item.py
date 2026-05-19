@@ -5,7 +5,8 @@ from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('Items')
-s3 = boto3.client('s3')
+REGION = os.environ.get('AWS_REGION', 'ap-east-2')
+s3 = boto3.client('s3', region_name=REGION, endpoint_url=f'https://s3.{REGION}.amazonaws.com')
 BUCKET = os.environ.get('BUCKET_NAME', 'nycu-lost-and-found-items-images')
 
 def get_cors_headers():
