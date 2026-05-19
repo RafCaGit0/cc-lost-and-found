@@ -1,8 +1,295 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { LogOut, Search, PlusCircle, MapPin, LayoutDashboard, CheckCircle, Trash2, Mail } from 'lucide-react'
 import { getItems, createItem, resolveItem, deleteItem } from './api'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
+import L from 'leaflet'
+import { CAMPUS_CENTER, CAMPUS_ZOOM, CAMPUS_LOCATIONS } from './campusLocations'
+
+// Fix Leaflet's default icon path issues in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    let timer;
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    });
+    const container = map.getContainer();
+    resizeObserver.observe(container);
+    return () => {
+      resizeObserver.unobserve(container);
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [map]);
+  return null;
+}
+
+const InteractiveMap = () => {
+  const [items, setItems] = useState([]);
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const targetLat = queryParams.get('lat') ? parseFloat(queryParams.get('lat')) : null;
+  const targetLng = queryParams.get('lng') ? parseFloat(queryParams.get('lng')) : null;
+  const targetId = queryParams.get('id');
+
+  const markerRefs = useRef({});
+
+  useEffect(() => {
+    getItems('').then(setItems).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (targetId && markerRefs.current[targetId] && items.length > 0) {
+      setTimeout(() => {
+        markerRefs.current[targetId].openPopup();
+      }, 500);
+    }
+  }, [targetId, items]);
+
+  function MapFocus() {
+    const map = useMap();
+    useEffect(() => {
+      if (targetLat && targetLng) {
+        const timer = setTimeout(() => {
+          map.flyTo([targetLat, targetLng], 19, { animate: true, duration: 1.5 });
+        }, 250);
+        return () => clearTimeout(timer);
+      }
+    }, [map, targetLat, targetLng]);
+    return null;
+  }
+
+  return (
+    <div style={{ height: 'calc(100vh - 75px)', width: '100%', position: 'relative' }}>
+      <MapContainer center={CAMPUS_CENTER} zoom={CAMPUS_ZOOM} maxZoom={19} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+        <MapResizer />
+        <MapFocus />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+        {items.filter(i => i.status !== 'RESOLVED').map(item => {
+          // Fallback to predefined location coordinates if lat/lng missing
+          const pos = (item.lat && item.lng) 
+            ? [item.lat, item.lng] 
+            : CAMPUS_LOCATIONS[item.location] || CAMPUS_CENTER;
+
+          const customIcon = item.imageUrl ? new L.DivIcon({
+            className: 'custom-map-icon',
+            html: `<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:3px solid ${item.postType==='LOST'?'#ef4444':'#3b82f6'};box-shadow:0 2px 5px rgba(0,0,0,0.3);background:white;"><img src="${item.imageUrl}" style="width:100%;height:100%;object-fit:cover;" /></div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+          }) : new L.Icon.Default();
+
+          return (
+            <Marker 
+              key={item.id} 
+              position={pos} 
+              icon={customIcon}
+              ref={el => { if (el) markerRefs.current[item.id] = el; }}
+            >
+              <Popup className="glass-popup">
+                <div style={{textAlign: 'center', minWidth: '160px'}}>
+                  {item.imageUrl && <img src={item.imageUrl} alt={item.title} style={{width:'100%', height:'100px', objectFit:'cover', borderRadius:'8px', marginBottom:'8px'}} />}
+                  <h3 style={{margin: '0 0 5px 0', fontSize: '1.1rem', color: 'var(--color-primary)'}}>{item.title}</h3>
+                  <div style={{marginBottom: '8px'}}>
+                    <span style={{fontSize: '0.75rem', fontWeight: 600, background: item.postType==='LOST'?'#ef4444':'#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px'}}>{item.status.replace(/_/g, ' ')}</span>
+                  </div>
+                  <p style={{margin: '0 0 10px 0', fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{item.location}</p>
+                  <Link to={`/item/${item.id}`} className="btn btn-primary" style={{display: 'block', padding: '6px', fontSize: '0.85rem', textDecoration: 'none', color: 'white'}}>View Details</Link>
+                </div>
+              </Popup>
+            </Marker>
+          )
+        })}
+      </MapContainer>
+    </div>
+  );
+}
+
+const LocationPickerMap = ({ position, setPosition }) => {
+  function LocationMarker() {
+    useMapEvents({
+      click(e) {
+        setPosition([e.latlng.lat, e.latlng.lng])
+      },
+    })
+    return position === null ? null : <Marker position={position}></Marker>
+  }
+
+  function MapUpdater({ pos }) {
+    const map = useMap();
+    useEffect(() => {
+      if (pos) {
+        map.flyTo(pos, 18, { animate: true, duration: 1 });
+      }
+    }, [pos, map]);
+    return null;
+  }
+
+  return (
+    <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+      <MapContainer center={CAMPUS_CENTER} zoom={CAMPUS_ZOOM} maxZoom={19} style={{ height: '300px', width: '100%', zIndex: 1 }}>
+        <MapResizer />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+        <LocationMarker />
+        <MapUpdater pos={position} />
+      </MapContainer>
+    </div>
+  )
+}
+
+const ItemDetails = () => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const id = pathname.split('/').pop();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    import('./api').then(({ getItem }) => {
+      getItem(id).then(setItem).catch(console.error).finally(() => setLoading(false));
+    });
+  }, [id]);
+
+  if (loading) return <div style={{textAlign: 'center', padding: '3rem'}}>Loading...</div>;
+  if (!item) return <div style={{textAlign: 'center', padding: '3rem'}}>Item not found</div>;
+
+  const pos = (item.lat && item.lng) ? [item.lat, item.lng] : CAMPUS_LOCATIONS[item.location] || CAMPUS_CENTER;
+
+  return (
+    <div className="glass-panel" style={{padding: '2rem', maxWidth: '900px', margin: '0 auto'}}>
+      <div style={{display: 'flex', gap: '2rem', flexWrap: 'wrap'}}>
+        <div style={{flex: '1 1 400px'}}>
+          <button onClick={() => navigate(-1)} className="btn btn-outline" style={{marginBottom: '1rem', border: 'none', padding: 0}}>← Back</button>
+          <h2 style={{marginTop: 0, color: 'var(--color-primary)', fontSize: '2rem'}}>{item.title}</h2>
+          <span style={{fontSize: '0.85rem', fontWeight: 600, background: item.status === 'RESOLVED' ? '#10b981' : (item.postType==='LOST'?'#ef4444':'#3b82f6'), color: 'white', padding: '4px 12px', borderRadius: '12px'}}>{item.status.replace(/_/g, ' ')}</span>
+          <p style={{fontSize: '1.1rem', lineHeight: 1.6, marginTop: '1.5rem', color: 'var(--text-secondary)'}}>{item.description}</p>
+          <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', color: 'var(--text-secondary)', fontWeight: 500}}>
+            <MapPin size={18} color="var(--color-accent)" /> {item.location}
+          </div>
+          <a href={`mailto:${item.authorEmail}?subject=Regarding ${item.postType} Item: ${item.title}`} className="btn btn-primary" style={{textDecoration: 'none', display: 'inline-flex'}}>
+            <Mail size={18} /> Contact Finder
+          </a>
+        </div>
+        <div style={{flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          {item.imageUrl && (
+            <img src={item.imageUrl} alt={item.title} style={{width: '100%', height: '250px', objectFit: 'cover', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)'}} />
+          )}
+          <div style={{ border: '1px solid #cbd5e1', borderRadius: 'var(--radius-md)', overflow: 'hidden', height: '250px', width: '100%' }}>
+            <MapContainer center={pos} zoom={18} maxZoom={19} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+              <MapResizer />
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+              <Marker position={pos} />
+            </MapContainer>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const EditPost = () => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const id = pathname.split('/').pop();
+  
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const [formData, setFormData] = useState({
+    postType: 'FOUND', status: 'LEFT_AT_SCENE', title: '', description: '', location: 'Library'
+  });
+  const [position, setPosition] = useState(null);
+
+  useEffect(() => {
+    import('./api').then(({ getItem }) => {
+      getItem(id).then(data => {
+        setFormData({
+          postType: data.postType,
+          status: data.status,
+          title: data.title,
+          description: data.description,
+          location: data.location
+        });
+        if (data.lat && data.lng) setPosition([data.lat, data.lng]);
+      }).catch(err => setError(err.message)).finally(() => setInitialLoading(false));
+    });
+  }, [id]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const payload = { ...formData };
+      if (position) {
+        payload.lat = position[0];
+        payload.lng = position[1];
+      }
+      const { updateItem } = await import('./api');
+      await updateItem(id, payload);
+      navigate(`/item/${id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const LOCATIONS = ['Library', 'Engineering Building 1', 'Engineering Building 3', 'Student Cafeteria', 'Student Activity Center', 'Admin Office (Lost & Found)', 'Gymnasium', 'Dormitory Area', 'Main Gate', 'Other'];
+
+  if (initialLoading) return <div style={{textAlign: 'center', padding: '3rem'}}>Loading...</div>;
+
+  return (
+    <div className="glass-panel" style={{padding: '3rem', maxWidth: '600px', margin: '0 auto'}}>
+      <h2 style={{color: 'var(--color-primary)', marginBottom: '2rem'}}>Edit Post</h2>
+      {error && <div style={{background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem'}}>{error}</div>}
+      <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+        <div>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Title</label>
+          <input required type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} style={{width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box'}} />
+        </div>
+        <div>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Description</label>
+          <textarea rows="4" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} style={{width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontFamily: 'inherit'}} />
+        </div>
+        <div>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>General Location Area</label>
+          <select 
+            value={formData.location} 
+            onChange={(e) => {
+              setFormData({...formData, location: e.target.value});
+              if (CAMPUS_LOCATIONS[e.target.value]) {
+                setPosition(CAMPUS_LOCATIONS[e.target.value]);
+              }
+            }} 
+            style={{width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', marginBottom: '1rem'}}
+          >
+            {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+          </select>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Exact Location Pin</label>
+          <LocationPickerMap position={position} setPosition={setPosition} />
+        </div>
+        <button type="submit" disabled={loading} className="btn btn-primary" style={{marginTop: '1rem', justifyContent: 'center', padding: '1rem'}}>
+          {loading ? 'Saving...' : 'Save Changes'}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 const Dashboard = () => (
   <div className="glass-panel" style={{padding: '3rem', textAlign: 'center'}}>
@@ -11,6 +298,7 @@ const Dashboard = () => (
       Help keep our campus connected. Did you lose something, or find something left behind?
     </p>
     <div style={{display: 'flex', gap: '1rem', justifyContent: 'center'}}>
+      <Link to="/map" className="btn btn-primary" style={{padding: '1rem 2rem', fontSize: '1.1rem'}}>Open Campus Map</Link>
       <Link to="/lost" className="btn btn-outline" style={{padding: '1rem 2rem', fontSize: '1.1rem'}}>Browse Lost Items</Link>
       <Link to="/found" className="btn btn-outline" style={{padding: '1rem 2rem', fontSize: '1.1rem'}}>Browse Found Items</Link>
     </div>
@@ -70,12 +358,12 @@ const ItemsList = ({ type }) => {
       <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem'}}>
         {items.length === 0 && <p style={{color: 'var(--text-secondary)'}}>No items found.</p>}
         {items.map(item => (
-          <div key={item.id} className="glass-panel" style={{padding: '1.5rem', display: 'flex', flexDirection: 'column'}}>
+          <div key={item.id} className="glass-panel" style={{padding: '1.5rem', display: 'flex', flexDirection: 'column', opacity: item.status === 'RESOLVED' ? 0.6 : 1, transition: 'opacity 0.2s ease'}}>
             {item.imageUrl && (
               <img 
                 src={item.imageUrl} 
                 alt={item.title} 
-                style={{width: '100%', height: '220px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: '1rem'}} 
+                style={{width: '100%', height: '220px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: '1rem', filter: item.status === 'RESOLVED' ? 'grayscale(100%)' : 'none'}} 
               />
             )}
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
@@ -96,10 +384,26 @@ const ItemsList = ({ type }) => {
               <MapPin size={16} color="var(--color-accent)" /> {item.location}
             </div>
             
-            <div style={{display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(0,0,0,0.05)'}}>
-              <a href={`mailto:${item.authorEmail}?subject=Regarding ${type} Item: ${item.title}`} className="btn btn-outline" style={{flex: 1, justifyContent: 'center', textDecoration: 'none'}}>
-                <Mail size={16} /> Contact
-              </a>
+            <div style={{display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid rgba(0,0,0,0.05)', flexWrap: 'wrap'}}>
+              <Link to={`/item/${item.id}`} className="btn btn-outline" style={{flex: 1, justifyContent: 'center', textDecoration: 'none'}}>
+                View Details
+              </Link>
+              
+              {item.status !== 'RESOLVED' && (
+                <>
+                  <Link 
+                    to={`/map?lat=${(item.lat && item.lng) ? item.lat : (CAMPUS_LOCATIONS[item.location] ? CAMPUS_LOCATIONS[item.location][0] : CAMPUS_CENTER[0])}&lng=${(item.lat && item.lng) ? item.lng : (CAMPUS_LOCATIONS[item.location] ? CAMPUS_LOCATIONS[item.location][1] : CAMPUS_CENTER[1])}&id=${item.id}`} 
+                    className="btn btn-primary" 
+                    title="View on Map"
+                  >
+                    <MapPin size={16} />
+                  </Link>
+                  
+                  <Link to={`/edit/${item.id}`} className="btn btn-outline" title="Edit Post">
+                    Edit
+                  </Link>
+                </>
+              )}
               
               {item.status !== 'RESOLVED' && (
                 <button onClick={() => handleResolve(item.id)} className="btn btn-primary" title="Mark as Resolved">
@@ -130,13 +434,19 @@ const CreatePost = () => {
     location: 'Library'
   });
   const [file, setFile] = useState(null);
+  const [position, setPosition] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await createItem(formData, file);
+      const payload = { ...formData };
+      if (position) {
+        payload.lat = position[0];
+        payload.lng = position[1];
+      }
+      await createItem(payload, file);
       navigate(formData.postType === 'LOST' ? '/lost' : '/found');
     } catch (err) {
       setError(err.message);
@@ -199,14 +509,24 @@ const CreatePost = () => {
         </div>
 
         <div>
-          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Location</label>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>General Location Area</label>
           <select 
             value={formData.location}
-            onChange={(e) => setFormData({...formData, location: e.target.value})}
-            style={{width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white'}}
+            onChange={(e) => {
+              setFormData({...formData, location: e.target.value});
+              if (CAMPUS_LOCATIONS[e.target.value]) {
+                setPosition(CAMPUS_LOCATIONS[e.target.value]);
+              }
+            }}
+            style={{width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', marginBottom: '1rem'}}
           >
             {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
           </select>
+          
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Exact Location Pin (Optional)</label>
+          <p style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem'}}>Click on the map to drop a pin where the item was lost or found.</p>
+          <LocationPickerMap position={position} setPosition={setPosition} />
+          {position && <p style={{fontSize: '0.85rem', color: 'var(--color-primary)', marginTop: '0.5rem', fontWeight: 500}}>📍 Location pinned successfully</p>}
         </div>
 
         <div>
@@ -231,7 +551,7 @@ const CreatePost = () => {
         </div>
 
         <button type="submit" disabled={loading} className="btn btn-primary" style={{marginTop: '1rem', justifyContent: 'center', padding: '1rem'}}>
-          {loading ? 'Submitting to DynamoDB...' : 'Post Item'}
+          {loading ? 'Posting Item...' : 'Post Item'}
         </button>
       </form>
     </div>
@@ -261,6 +581,7 @@ const Navigation = () => {
       </Link>
       
       <div className="nav-links">
+        <Link to="/map" className={`nav-link ${location.pathname === '/map' ? 'active' : ''}`}>Map View</Link>
         <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
         <Link to="/lost" className={`nav-link ${location.pathname === '/lost' ? 'active' : ''}`}>Lost Items</Link>
         <Link to="/found" className={`nav-link ${location.pathname === '/found' ? 'active' : ''}`}>Found Items</Link>
@@ -282,15 +603,19 @@ const Navigation = () => {
 };
 
 function AppContent() {
+  const location = useLocation();
   return (
     <div className="app-layout">
       <Navigation />
-      <main className="main-content">
+      <main className="main-content" style={location.pathname === '/map' ? {padding: 0, maxWidth: '100%'} : {}}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/map" element={<InteractiveMap />} />
           <Route path="/lost" element={<ItemsList type="Lost" />} />
           <Route path="/found" element={<ItemsList type="Found" />} />
           <Route path="/create" element={<CreatePost />} />
+          <Route path="/item/:id" element={<ItemDetails />} />
+          <Route path="/edit/:id" element={<EditPost />} />
         </Routes>
       </main>
     </div>

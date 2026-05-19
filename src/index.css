@@ -200,3 +200,23 @@ body {
 h1, h2, h3 {
   letter-spacing: -0.5px;
 }
+
+/* Map Overrides */
+.custom-map-icon {
+  background: transparent;
+  border: none;
+}
+
+.glass-popup .leaflet-popup-content-wrapper {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  padding: 0;
+}
+
+.glass-popup .leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.85);
+}

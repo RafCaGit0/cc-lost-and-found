@@ -94,3 +94,23 @@ export async function deleteItem(id) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function updateItem(id, data) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/items/${id}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getItem(id) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/items/${id}`, {
+    headers
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}

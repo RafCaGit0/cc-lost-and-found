@@ -121,11 +121,13 @@ Gymnasium, Dormitory Area, Main Gate, Other
 
 ## Phase 3 — Polish & Deploy
 
-- [ ] Connect GitHub repo to AWS Amplify Hosting (auto-deploy from `main`)
-- [ ] Set environment variables in Amplify console (Cognito IDs, API URL)
+- [x] Connect GitHub repo to AWS Amplify Hosting (auto-deploy from `main`)
+- [x] Set environment variables in Amplify console (Cognito IDs, API URL)
+- [ ] Relocate the predefined location pins on campus to be more accurate!
 - [ ] End-to-end test all flows (A, B, C, D from spec)
 - [ ] Test pre-sign-up Lambda: attempt signup with `@gmail.com` → should be rejected
-- [ ] Test admin promotion and admin-only delete
+- [ ] Implement admin functionality: Test admin promotion and admin-only delete, perhaps whole user management (or leave it as is and do this through AWS Console).
+- [ ] Add responsive design for mobile and desktop!
 
 ---
 
@@ -134,14 +136,15 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - [ ] **Rekognition:** Lambda triggered on S3 upload → `detect_labels` → update DynamoDB item with `tags` field
 - [ ] **SES:** `resolve_item.py` sends email to `authorEmail` on resolve
 - [ ] **Search/Filter:** Add filter bar to Home feed (by location, postType, status)
-- [ ] **Campus Map:** Leaflet.js map, plot item pins by location value
 - [ ] **S3 Lifecycle Rule:** Delete untagged objects older than 7 days to clean up orphaned uploads
+- [ ] Create own custom domain for app and email (e.g. @[EMAIL_ADDRESS])
+- [ ] Add other NYCU campuses to the map. Need coordinates, buttons to switch between campuses.
 
 ---
 
 ## Phase 5 — Post-Launch Hardening (MVP-Friendly)
 
-- [ ] **Operational hygiene**: Confirm Amplify env vars are set (`VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID`) and add a simple "health check" endpoint to verify API + auth.
+- [x] **Operational hygiene**: Confirm Amplify env vars are set (`VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID`) and add a simple "health check" endpoint to verify API + auth.
 - [ ] **Abuse guardrails**: Add a soft image size cap in the client (e.g., 5–10MB) and show a friendly error; log oversize attempts server-side.
 - [ ] **Visibility & audit**: Log `sub` and email on write actions (create, resolve, delete) so you can trace misuse.
 - [ ] **Basic rate limiting**: Add an API Gateway usage plan or WAF rule with conservative limits (mostly click-ops, no code).
