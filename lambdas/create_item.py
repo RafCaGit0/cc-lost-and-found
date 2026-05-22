@@ -28,6 +28,7 @@ def lambda_handler(event, context):
         title = body.get('title')
         description = body.get('description', '')
         image_key = body.get('imageKey')
+        tags = body.get('tags', [])
         lat = body.get('lat')
         lng = body.get('lng')
         
@@ -54,7 +55,8 @@ def lambda_handler(event, context):
             'status': status,
             'authorEmail': author_email,
             'timestamp': timestamp,
-            'updatedAt': timestamp
+            'updatedAt': timestamp,
+            'tags': tags
         }
         if image_key: item['imageKey'] = image_key
         if lat is not None and lng is not None:

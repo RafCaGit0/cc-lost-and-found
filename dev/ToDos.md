@@ -150,3 +150,11 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - [ ] **Basic rate limiting**: Add an API Gateway usage plan or WAF rule with conservative limits (mostly click-ops, no code).
 - [ ] **Email privacy**: Replace mailto with a "contact requester" modal that reveals email only after user intent.
 - [ ] **Backup & retention**: Turn on DynamoDB PITR and set S3 lifecycle rules to expire unused images after N days.
+## Potential Future Enhancements
+- Wrap the React router in an ErrorBoundary to provide a graceful fallback UI instead of unmounting the app when a child component throws an unhandled error.
+
+## Refactoring & Code Hygiene
+- Move `LocationMarker` out of `LocationPickerMap` to prevent inline component definition.
+- Extract `LOCATIONS` array to a shared constant.
+- Refactor `ItemDetails` to use `useParams()` instead of `pathname.split('/').pop()`.
+- Add frontend route guard on `/edit/:id` to prevent non-authors from opening the edit form (though backend already blocks the actual save).

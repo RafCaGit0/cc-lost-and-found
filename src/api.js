@@ -61,7 +61,7 @@ export async function createItem(data, imageFile) {
     imageKey = newKey;
   }
   
-  // Phase 2: Save the item data (with the imageKey) to DynamoDB
+  // Phase 2: Save the item data (with the imageKey and tags) to DynamoDB
   const payload = { ...data };
   if (imageKey) payload.imageKey = imageKey;
   
@@ -130,6 +130,17 @@ export async function promoteUser(username) {
     method: 'POST',
     headers,
     body: JSON.stringify({ username })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function analyzeImage(base64Str) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/items/analyze`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ image: base64Str })
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
