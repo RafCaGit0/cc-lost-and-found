@@ -114,3 +114,23 @@ export async function getItem(id) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+export async function getUsers() {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/admin/users`, {
+    headers
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function promoteUser(username) {
+  const headers = await getHeaders();
+  const res = await fetch(`${API_URL}/admin/promote`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ username })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
