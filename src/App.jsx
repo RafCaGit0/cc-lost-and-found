@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react'
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
-import { LogOut, Search, PlusCircle, MapPin, LayoutDashboard, CheckCircle, Trash2, Mail } from 'lucide-react'
-import { getItems, createItem, resolveItem, deleteItem } from './api'
+import { LogOut, Search, PlusCircle, MapPin, LayoutDashboard, CheckCircle, Trash2, Mail, Users, ShieldAlert } from 'lucide-react'
+import { getItems, createItem, resolveItem, deleteItem, getUsers, promoteUser } from './api'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -569,9 +569,128 @@ const components = {
   }
 };
 
+const AdminDashboard = () => {
+  const { user } = useAuthenticator((context) => [context.user]);
+  const currentUsername = user?.username || user?.signInDetails?.loginId;
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [promoting, setPromoting] = useState(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await getUsers();
+      setUsers(data);
+    } catch (err) {
+      if (err.message.includes('403') || err.message.includes('Forbidden')) {
+        setError('403 Access Denied: You must be an administrator to view this page.');
+      } else {
+        setError('Error fetching users: ' + err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePromote = async (username) => {
+    if (!window.confirm(`Are you sure you want to promote ${username} to Admin?`)) return;
+    try {
+      setPromoting(username);
+      await promoteUser(username);
+      alert(`${username} has been promoted to Admin successfully.`);
+      fetchUsers();
+    } catch (err) {
+      alert("Error promoting user: " + err.message);
+    } finally {
+      setPromoting(null);
+    }
+  };
+
+  if (loading && users.length === 0) return <div style={{textAlign: 'center', padding: '3rem', color: 'var(--color-primary)'}}>Loading admin dashboard...</div>;
+
+  if (error) return (
+    <div className="glass-panel" style={{padding: '3rem', maxWidth: '600px', margin: '2rem auto', textAlign: 'center'}}>
+      <ShieldAlert size={48} color="#ef4444" style={{marginBottom: '1rem'}} />
+      <h2 style={{color: '#ef4444', marginBottom: '1rem'}}>Access Denied</h2>
+      <p style={{color: 'var(--text-secondary)'}}>{error}</p>
+    </div>
+  );
+
+  return (
+    <div className="glass-panel" style={{padding: '2rem', margin: '0 auto', maxWidth: '900px'}}>
+      <div className="page-header" style={{marginBottom: '2rem'}}>
+        <h2 style={{display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)'}}>
+          <Users size={28} /> Admin Dashboard
+        </h2>
+        <p>Manage users and platform access</p>
+      </div>
+
+      <div style={{overflowX: 'auto'}}>
+        <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
+          <thead>
+            <tr style={{borderBottom: '2px solid rgba(0,0,0,0.1)'}}>
+              <th style={{padding: '1rem 0.5rem', color: 'var(--text-secondary)', fontWeight: 600}}>Email</th>
+              <th style={{padding: '1rem 0.5rem', color: 'var(--text-secondary)', fontWeight: 600}}>Status</th>
+              <th style={{padding: '1rem 0.5rem', color: 'var(--text-secondary)', fontWeight: 600}}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.username} style={{borderBottom: '1px solid rgba(0,0,0,0.05)'}}>
+                <td style={{padding: '1rem 0.5rem', fontWeight: 500, color: 'var(--color-primary)'}}>{u.email || 'N/A'}</td>
+                <td style={{padding: '1rem 0.5rem'}}>
+                  <span style={{background: u.status === 'CONFIRMED' ? '#10b981' : '#f59e0b', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>
+                    {u.status}
+                  </span>
+                </td>
+                <td style={{padding: '1rem 0.5rem'}}>
+                  {u.username === currentUsername || u.isAdmin ? (
+                    <span style={{color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.85rem'}}>Already Admin</span>
+                  ) : (
+                    <button 
+                      onClick={() => handlePromote(u.username)} 
+                      disabled={promoting === u.username}
+                      className="btn btn-outline"
+                      style={{padding: '0.4rem 0.8rem', fontSize: '0.85rem'}}
+                    >
+                      {promoting === u.username ? 'Promoting...' : 'Promote to Admin'}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan="3" style={{textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)'}}>No users found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
 const Navigation = () => {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    import('aws-amplify/auth').then(({ fetchAuthSession }) => {
+      fetchAuthSession().then(session => {
+        const groups = session.tokens?.idToken?.payload?.['cognito:groups'] || [];
+        setIsAdmin(groups.includes('Admins'));
+      }).catch(console.error);
+    });
+  }, []);
 
   return (
     <nav className="navbar">
@@ -585,6 +704,12 @@ const Navigation = () => {
         <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
         <Link to="/lost" className={`nav-link ${location.pathname === '/lost' ? 'active' : ''}`}>Lost Items</Link>
         <Link to="/found" className={`nav-link ${location.pathname === '/found' ? 'active' : ''}`}>Found Items</Link>
+        {isAdmin && (
+          <Link to="/admin" className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}>
+            <ShieldAlert size={16} style={{display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom'}} /> 
+            Admin Panel
+          </Link>
+        )}
         <Link to="/create" className="btn btn-primary" style={{textDecoration: 'none'}}>
           <PlusCircle size={18} /> Report Item
         </Link>
@@ -616,6 +741,7 @@ function AppContent() {
           <Route path="/create" element={<CreatePost />} />
           <Route path="/item/:id" element={<ItemDetails />} />
           <Route path="/edit/:id" element={<EditPost />} />
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
     </div>
