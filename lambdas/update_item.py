@@ -27,6 +27,9 @@ def lambda_handler(event, context):
         new_title = body.get('title')
         new_description = body.get('description')
         new_location = body.get('location')
+        new_tags = body.get('tags')
+        new_lat = body.get('lat')
+        new_lng = body.get('lng')
         
         update_exp = "SET updatedAt = :u"
         exp_vals = {':u': int(time.time() * 1000)}
@@ -50,6 +53,18 @@ def lambda_handler(event, context):
                 return {"statusCode": 400, "headers": get_cors_headers(), "body": json.dumps({"error": "Invalid location"})}
             update_exp += ", #loc = :l"
             exp_vals[':l'] = new_location
+            
+        if new_tags is not None and isinstance(new_tags, list):
+            update_exp += ", tags = :tags"
+            exp_vals[':tags'] = new_tags
+            
+        if new_lat is not None:
+            update_exp += ", lat = :lat"
+            exp_vals[':lat'] = new_lat
+            
+        if new_lng is not None:
+            update_exp += ", lng = :lng"
+            exp_vals[':lng'] = new_lng
             
         names = {}
         if new_status: names['#st'] = 'status'
