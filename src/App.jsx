@@ -421,9 +421,50 @@ const ItemsList = ({ type }) => {
   );
 }
 
+const compressImage = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Output as jpeg with 0.8 quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 const CreatePost = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
@@ -431,10 +472,60 @@ const CreatePost = () => {
     status: 'LEFT_AT_SCENE',
     title: '',
     description: '',
-    location: 'Library'
+    location: 'Library',
+    tags: []
   });
+  const [tagInput, setTagInput] = useState('');
   const [file, setFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [position, setPosition] = useState(null);
+
+  const handleImageSelect = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    // 10MB strict limit for original file
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError("Image is too large. Maximum allowed size is 10MB.");
+      e.target.value = '';
+      return;
+    }
+    
+    setFile(selectedFile);
+    setError('');
+    
+    try {
+      setAnalyzing(true);
+      const base64Str = await compressImage(selectedFile);
+      setImagePreview(base64Str);
+      const { analyzeImage } = await import('./api');
+      const { tags } = await analyzeImage(base64Str);
+      
+      setFormData(prev => {
+        const newTags = Array.from(new Set([...prev.tags, ...tags]));
+        // Auto-fill title if empty
+        const newTitle = prev.title === '' && tags.length > 0 ? tags[0] : prev.title;
+        return { ...prev, tags: newTags, title: newTitle };
+      });
+    } catch (err) {
+      console.error("AI Analysis failed:", err);
+      // Don't block upload if AI fails, just log it.
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const addTag = (e) => {
+    e.preventDefault();
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+      setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData({...formData, tags: formData.tags.filter(t => t !== tagToRemove)});
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -464,6 +555,52 @@ const CreatePost = () => {
       {error && <div style={{background: '#fee2e2', color: '#991b1b', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem'}}>{error}</div>}
       
       <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+        <div>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Image (Upload first to auto-fill details)</label>
+          
+          {imagePreview && (
+            <div style={{marginBottom: '1rem'}}>
+              <img src={imagePreview} alt="Preview" style={{width: '100%', maxHeight: '250px', objectFit: 'cover', borderRadius: '8px', boxShadow: 'var(--shadow-sm)'}} />
+              <button type="button" onClick={() => { setFile(null); setImagePreview(null); }} className="btn btn-outline" style={{marginTop: '0.5rem', fontSize: '0.85rem', padding: '0.4rem 0.8rem'}}>
+                Change Image
+              </button>
+            </div>
+          )}
+
+          {!imagePreview && (
+            <input 
+              type="file" 
+              accept="image/png, image/jpeg, image/webp"
+              onChange={handleImageSelect}
+              style={{width: '100%', padding: '0.8rem', background: 'white', borderRadius: '8px', border: '1px dashed #cbd5e1'}}
+            />
+          )}
+          {analyzing && <p style={{fontSize: '0.85rem', color: '#3b82f6', marginTop: '0.5rem'}}>✨ Analyzing image with AI...</p>}
+        </div>
+
+        <div>
+          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Tags</label>
+          <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem'}}>
+            {formData.tags.map(tag => (
+              <span key={tag} style={{background: '#e2e8f0', color: '#475569', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem'}}>
+                {tag}
+                <button type="button" onClick={() => removeTag(tag)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0, fontSize: '1rem', lineHeight: 1}}>&times;</button>
+              </span>
+            ))}
+          </div>
+          <div style={{display: 'flex', gap: '0.5rem'}}>
+            <input 
+              type="text" 
+              placeholder="Add manual tag (e.g. Red, Backpack)"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addTag(e)}
+              style={{flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid #cbd5e1'}}
+            />
+            <button type="button" onClick={addTag} className="btn btn-outline">Add Tag</button>
+          </div>
+        </div>
+
         <div style={{display: 'flex', gap: '1rem'}}>
           <div style={{flex: 1}}>
             <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Type</label>
@@ -540,17 +677,7 @@ const CreatePost = () => {
           />
         </div>
 
-        <div>
-          <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: 'var(--text-secondary)'}}>Image (Optional)</label>
-          <input 
-            type="file" 
-            accept="image/png, image/jpeg, image/webp"
-            onChange={(e) => setFile(e.target.files[0])}
-            style={{width: '100%', padding: '0.8rem', background: 'white', borderRadius: '8px', border: '1px dashed #cbd5e1'}}
-          />
-        </div>
-
-        <button type="submit" disabled={loading} className="btn btn-primary" style={{marginTop: '1rem', justifyContent: 'center', padding: '1rem'}}>
+        <button type="submit" disabled={loading || analyzing} className="btn btn-primary" style={{marginTop: '1rem', justifyContent: 'center', padding: '1rem'}}>
           {loading ? 'Posting Item...' : 'Post Item'}
         </button>
       </form>

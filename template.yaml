@@ -78,6 +78,10 @@ Resources:
                 Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
               - Effect: Allow
                 Action:
+                  - rekognition:DetectLabels
+                Resource: "*"
+              - Effect: Allow
+                Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
@@ -180,6 +184,20 @@ Resources:
           Properties:
             RestApiId: !Ref LostAndFoundApi
             Path: /items/upload-url
+            Method: post
+
+  AnalyzeImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambdas/
+      Handler: analyze_image.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref LostAndFoundApi
+            Path: /items/analyze
             Method: post
 
   AdminListUsersFunction:
