@@ -7,9 +7,9 @@ import { createItemIcon } from '../components/MapMarker';
 import SearchFilterBar from '../components/SearchFilterBar';
 import MapStatsBar from '../components/MapStatsBar';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useItems } from '../contexts/ItemsContext';
 import { useSearch, useFilteredItems } from '../contexts/SearchContext';
 import { useAuth } from '../hooks/useAuth';
-import { getItems } from '../api';
 import { CAMPUS_CENTER, CAMPUS_ZOOM, CAMPUS_LOCATIONS } from '../campusLocations';
 
 // Fix Leaflet's default icon path issues in React
@@ -57,10 +57,9 @@ function MapFocus({ targetLat, targetLng }) {
 }
 
 export default function MapView() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { items, loading, error } = useItems();
   const { userEmail } = useAuth();
+
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const targetLat = queryParams.get('lat') ? parseFloat(queryParams.get('lat')) : null;
@@ -68,17 +67,6 @@ export default function MapView() {
   const targetId = queryParams.get('id');
 
   const markerRefs = useRef({});
-
-  useEffect(() => {
-    setLoading(true);
-    getItems('')
-      .then(setItems)
-      .catch(err => {
-        console.error(err);
-        setError('Failed to fetch items');
-      })
-      .finally(() => setLoading(false));
-  }, []);
 
   const visibleItems = useFilteredItems(items, userEmail);
 

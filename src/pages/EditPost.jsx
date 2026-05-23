@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { LOCATIONS, TIME_RANGES } from '../utils/constants';
 import { CAMPUS_CENTER, CAMPUS_ZOOM, CAMPUS_LOCATIONS } from '../campusLocations';
 import { getItem, updateItem } from '../api';
+import { useItems } from '../contexts/ItemsContext';
 import { MapResizer } from './MapView';
 
 // Fix Leaflet's default icon path issues in React
@@ -40,6 +41,7 @@ function LocationPickerMap({ position, setPosition, formData }) {
 export default function EditPost() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { refreshItems } = useItems();
   
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -104,6 +106,7 @@ export default function EditPost() {
         payload.lng = position[1];
       }
       await updateItem(id, payload);
+      refreshItems();
       navigate(`/item/${id}`);
     } catch (err) {
       setError(err.message);

@@ -46,15 +46,16 @@ export async function createItem(data, imageFile) {
     });
     
     if (!urlRes.ok) throw new Error("Failed to get secure upload URL");
-    const { uploadUrl, imageKey: newKey } = await urlRes.json();
+    const { uploadUrl, uploadFields, imageKey: newKey } = await urlRes.json();
     
-    // 1b. Put the file directly into the S3 bucket
+    // 1b. Put the file directly into the S3 bucket using POST and FormData
+    const formData = new FormData();
+    Object.entries(uploadFields).forEach(([k, v]) => formData.append(k, v));
+    formData.append("file", imageFile); // file must be the last field appended!
+    
     const s3Res = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': imageFile.type
-      },
-      body: imageFile
+      method: 'POST',
+      body: formData
     });
     
     if (!s3Res.ok) throw new Error("Failed to upload image to S3");

@@ -2,6 +2,7 @@ import React from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { SearchProvider } from './contexts/SearchContext';
+import { ItemsProvider } from './contexts/ItemsContext';
 import Navbar from './components/Navbar';
 import MapView from './pages/MapView';
 import Feed from './pages/Feed';
@@ -26,6 +27,7 @@ const AppContent = () => {
   const isMapRoute = location.pathname === '/';
 
   return (
+    <ItemsProvider>
     <SearchProvider>
       <div className="app-layout">
         <Navbar />
@@ -46,6 +48,7 @@ const AppContent = () => {
         </main>
       </div>
     </SearchProvider>
+    </ItemsProvider>
   );
 };
 

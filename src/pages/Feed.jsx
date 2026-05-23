@@ -5,15 +5,15 @@ import ItemCard from '../components/ItemCard';
 import SearchFilterBar from '../components/SearchFilterBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useItems } from '../contexts/ItemsContext';
 import { useSearch, useFilteredItems } from '../contexts/SearchContext';
 import { useAuth } from '../hooks/useAuth';
-import { getItems, resolveItem, deleteItem } from '../api';
+import { resolveItem, deleteItem } from '../api';
 
 export default function Feed() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { items, loading, error, refreshItems } = useItems();
   const { userEmail } = useAuth();
+
   const { typeFilter, setTypeFilter, myPostsOnly, setMyPostsOnly } = useSearch();
   const location = useLocation();
 
@@ -29,33 +29,14 @@ export default function Feed() {
     }
   }, [location.search, setMyPostsOnly]);
 
-  // Fetch all items
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  async function fetchItems() {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await getItems('');
-      setItems(data);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch items');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const visibleItems = useFilteredItems(items, userEmail);
 
   const handleResolve = async (id) => {
     try {
       await resolveItem(id);
-      fetchItems();
+      refreshItems();
     } catch (err) {
-      setError('Error: ' + err.message);
+      console.error('Error resolving:', err.message);
     }
   };
 
@@ -69,9 +50,9 @@ export default function Feed() {
     setDeleteDialogOpen(false);
     try {
       await deleteItem(pendingDeleteId);
-      fetchItems();
+      refreshItems();
     } catch (err) {
-      setError('Error: ' + err.message);
+      console.error('Error deleting:', err.message);
     } finally {
       setPendingDeleteId(null);
     }

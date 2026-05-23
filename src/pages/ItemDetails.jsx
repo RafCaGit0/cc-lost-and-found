@@ -202,7 +202,7 @@ export default function ItemDetails() {
           </div>
 
           {/* Location & Date Block */}
-          <div style={{ ...blockStyle, display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+          <div style={{ ...blockStyle, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
               <div style={{ background: '#eff6ff', padding: '0.75rem', borderRadius: '50%', color: 'var(--color-primary)' }}>
                 <MapPin size={20} />

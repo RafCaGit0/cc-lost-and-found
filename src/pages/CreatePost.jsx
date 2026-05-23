@@ -12,6 +12,7 @@ import { CAMPUS_CENTER, CAMPUS_ZOOM, CAMPUS_LOCATIONS } from '../campusLocations
 import { compressImage } from '../utils/compressImage';
 import { getTodayISO } from '../utils/formatDate';
 import { analyzeImage, createItem } from '../api';
+import { useItems } from '../contexts/ItemsContext';
 import { MapResizer } from './MapView';
 
 // Fix Leaflet's default icon path issues in React
@@ -42,6 +43,7 @@ function LocationPickerMap({ position, setPosition, formData }) {
 export default function CreatePost() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshItems } = useItems();
   const queryParams = new URLSearchParams(location.search);
   const initialType = queryParams.get('type') === 'LOST' ? 'LOST' : 'FOUND';
 
@@ -119,6 +121,7 @@ export default function CreatePost() {
         payload.lng = position[1];
       }
       await createItem(payload, file);
+      refreshItems();
       navigate('/feed');
     } catch (err) {
       setError(err.message);
@@ -168,7 +171,7 @@ export default function CreatePost() {
             <div className="upload-area" onClick={() => document.getElementById('imageUpload').click()}>
               <Upload className="upload-area__icon" size={32} />
               <div className="upload-area__text">Click to upload or drag an image</div>
-              <div className="upload-area__hint">Supports JPG, PNG (Max 10MB)</div>
+              <div className="upload-area__hint">Supports JPG, PNG, WEBP (Max 10MB)</div>
               <input id="imageUpload" type="file" accept="image/png, image/jpeg, image/webp" onChange={handleImageSelect} style={{display: 'none'}} />
             </div>
           )}
