@@ -1,6 +1,7 @@
 import json
 import boto3
 import time
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('Items')
@@ -30,6 +31,8 @@ def lambda_handler(event, context):
         new_tags = body.get('tags')
         new_lat = body.get('lat')
         new_lng = body.get('lng')
+        new_incident_date = body.get('incidentDate')
+        new_incident_time_range = body.get('incidentTimeRange')
         
         update_exp = "SET updatedAt = :u"
         exp_vals = {':u': int(time.time() * 1000)}
@@ -60,11 +63,19 @@ def lambda_handler(event, context):
             
         if new_lat is not None:
             update_exp += ", lat = :lat"
-            exp_vals[':lat'] = new_lat
+            exp_vals[':lat'] = Decimal(str(new_lat))
             
         if new_lng is not None:
             update_exp += ", lng = :lng"
-            exp_vals[':lng'] = new_lng
+            exp_vals[':lng'] = Decimal(str(new_lng))
+            
+        if new_incident_date is not None:
+            update_exp += ", incidentDate = :idate"
+            exp_vals[':idate'] = new_incident_date
+            
+        if new_incident_time_range is not None:
+            update_exp += ", incidentTimeRange = :itime"
+            exp_vals[':itime'] = new_incident_time_range
             
         names = {}
         if new_status: names['#st'] = 'status'

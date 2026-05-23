@@ -158,3 +158,8 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - Extract `LOCATIONS` array to a shared constant.
 - Refactor `ItemDetails` to use `useParams()` instead of `pathname.split('/').pop()`.
 - Add frontend route guard on `/edit/:id` to prevent non-authors from opening the edit form (though backend already blocks the actual save).
+
+## Security Audit Findings (Addressed)
+- [x] **IAM Role Bloat**: `template.yaml` previously used a monolithic role. Broken down into specific SAM policies (`DynamoDBReadPolicy`, `DynamoDBCrudPolicy`, `S3WritePolicy`).
+- [x] **S3 Upload DOS**: `get_upload_url.py` migrated from `generate_presigned_url` (PUT) to `generate_presigned_post` (POST) to strictly enforce `content-length-range` up to 10MB at the AWS infrastructure level.
+- [ ] **Wildcard CORS Headers**: Currently lambdas return `Access-Control-Allow-Origin: *`. Replace this with specific production domain environment variables.

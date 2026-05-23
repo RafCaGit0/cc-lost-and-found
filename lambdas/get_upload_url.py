@@ -23,12 +23,20 @@ def lambda_handler(event, context):
         ext = content_type.split('/')[-1]
         image_key = f"uploads/{uuid.uuid4()}.{ext}"
         
-        url = s3.generate_presigned_url('put_object',
-            Params={'Bucket': BUCKET, 'Key': image_key, 'ContentType': content_type},
-            ExpiresIn=300)
+        presigned_post = s3.generate_presigned_post(
+            Bucket=BUCKET,
+            Key=image_key,
+            Fields={"Content-Type": content_type},
+            Conditions=[
+                {"Content-Type": content_type},
+                ["content-length-range", 1, 10485760]
+            ],
+            ExpiresIn=300
+        )
             
         return {"statusCode": 200, "headers": get_cors_headers(), "body": json.dumps({
-            "uploadUrl": url,
+            "uploadUrl": presigned_post['url'],
+            "uploadFields": presigned_post['fields'],
             "imageKey": image_key
         })}
     except Exception as e:

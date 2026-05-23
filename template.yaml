@@ -37,63 +37,17 @@ Resources:
           CognitoAuthorizer:
             UserPoolArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
 
-  # Common IAM Role for all Lambdas
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal: { Service: lambda.amazonaws.com }
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LostAndFoundPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:PutItem
-                  - dynamodb:UpdateItem
-                  - dynamodb:DeleteItem
-                  - dynamodb:Scan
-                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/Items"
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                Resource: !Sub "arn:aws:s3:::${BucketName}/*"
-              - Effect: Allow
-                Action:
-                  - s3:ListBucket
-                Resource: !Sub "arn:aws:s3:::${BucketName}"
-              - Effect: Allow
-                Action:
-                  - cognito-idp:ListUsers
-                  - cognito-idp:ListUsersInGroup
-                  - cognito-idp:AdminAddUserToGroup
-                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
-              - Effect: Allow
-                Action:
-                  - rekognition:DetectLabels
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: "arn:aws:logs:*:*:*"
-
   # Lambda Functions
   GetItemsFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambdas/
       Handler: get_items.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: Items
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
       Events:
         Api:
           Type: Api
@@ -107,7 +61,11 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: get_item.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: Items
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
       Events:
         Api:
           Type: Api
@@ -121,7 +79,9 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: create_item.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: Items
       Events:
         Api:
           Type: Api
@@ -135,7 +95,9 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: update_item.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: Items
       Events:
         Api:
           Type: Api
@@ -149,7 +111,11 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: delete_item.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: Items
+        - S3CrudPolicy:
+            BucketName: !Ref BucketName
       Events:
         Api:
           Type: Api
@@ -163,7 +129,9 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: resolve_item.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: Items
       Events:
         Api:
           Type: Api
@@ -177,7 +145,9 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: get_upload_url.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref BucketName
       Events:
         Api:
           Type: Api
@@ -191,7 +161,8 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: analyze_image.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - RekognitionDetectOnlyPolicy: {}
       Events:
         Api:
           Type: Api
@@ -205,7 +176,13 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: admin_list_users.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+                - cognito-idp:ListUsersInGroup
+              Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
       Events:
         Api:
           Type: Api
@@ -219,7 +196,12 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: admin_promote_user.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminAddUserToGroup
+              Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}"
       Events:
         Api:
           Type: Api
@@ -234,7 +216,6 @@ Resources:
     Properties:
       CodeUri: lambdas/
       Handler: pre_signup.lambda_handler
-      Role: !GetAtt LambdaExecutionRole.Arn
 
   # Permission for Cognito to invoke the pre-signup Lambda
   PreSignupPermission:

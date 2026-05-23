@@ -44,7 +44,7 @@ def lambda_handler(event, context):
             if item.get('imageKey'):
                 try:
                     item['imageUrl'] = s3.generate_presigned_url('get_object',
-                        Params={'Bucket': BUCKET, 'Key': item['imageKey']}, ExpiresIn=900)
+                        Params={'Bucket': BUCKET, 'Key': item['imageKey']}, ExpiresIn=3600)
                 except:
                     pass
                     
