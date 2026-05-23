@@ -31,6 +31,8 @@ def lambda_handler(event, context):
         tags = body.get('tags', [])
         lat = body.get('lat')
         lng = body.get('lng')
+        incident_date = body.get('incidentDate')
+        incident_time_range = body.get('incidentTimeRange')
         
         if post_type not in ['FOUND', 'LOST']: return {"statusCode": 400, "headers": get_cors_headers(), "body": json.dumps({"error": "Invalid postType"})}
         
@@ -62,6 +64,8 @@ def lambda_handler(event, context):
         if lat is not None and lng is not None:
             item['lat'] = Decimal(str(lat))
             item['lng'] = Decimal(str(lng))
+        if incident_date: item['incidentDate'] = incident_date
+        if incident_time_range: item['incidentTimeRange'] = incident_time_range
         
         table.put_item(Item=item)
         return {"statusCode": 201, "headers": get_cors_headers(), "body": json.dumps(item, cls=DecimalEncoder)}

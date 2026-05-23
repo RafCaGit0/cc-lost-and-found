@@ -96,11 +96,13 @@ export async function deleteItem(id) {
 }
 
 export async function updateItem(id, data) {
+  const payload = { ...data };
+
   const headers = await getHeaders();
   const res = await fetch(`${API_URL}/items/${id}`, {
     method: 'PUT',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
