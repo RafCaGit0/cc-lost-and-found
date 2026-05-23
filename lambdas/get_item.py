@@ -31,7 +31,7 @@ def lambda_handler(event, context):
             
         if item.get('imageKey'):
             item['imageUrl'] = s3.generate_presigned_url('get_object',
-                Params={'Bucket': BUCKET, 'Key': item['imageKey']}, ExpiresIn=900)
+                Params={'Bucket': BUCKET, 'Key': item['imageKey']}, ExpiresIn=3600)
                 
         return {"statusCode": 200, "headers": get_cors_headers(), "body": json.dumps(item, cls=DecimalEncoder)}
     except Exception as e:
