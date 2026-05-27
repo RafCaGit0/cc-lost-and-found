@@ -12,7 +12,7 @@ export const CAMPUS_LOCATIONS = {
   'Student Cafeteria':          [24.7878, 120.9992],
   'Student Activity Center':    [24.7882, 120.9988],
   'Admin Office (Lost & Found)':[24.7875, 121.0001],
-  'Gymnasium':                  [24.7888, 121.0005],
+  'Gymnasium':                  [24.7891, 120.9965],
   'Dormitory Area':             [24.7855, 121.0010],
   'Main Gate':                  [24.7893, 120.9970],
   'Other':                      [24.7868, 120.9985], // fallback to campus center

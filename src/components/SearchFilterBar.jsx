@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, SlidersHorizontal, Check } from 'lucide-react';
+import { Search, X, SlidersHorizontal } from 'lucide-react';
 import { useSearch } from '../contexts/SearchContext';
 import { LOCATIONS } from '../utils/constants';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,7 @@ export default function SearchFilterBar({
   collapsible = false,
   showTypeFilter = false,
   showSortBy = false,
+  showMobileToggle = false,
 }) {
   const {
     searchTerm, setSearchTerm,
@@ -21,6 +22,7 @@ export default function SearchFilterBar({
   
   const { userEmail } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const dropdownRef = useRef(null);
 
   // Close dropdown on click outside
@@ -41,20 +43,48 @@ export default function SearchFilterBar({
   // For Map View (collapsible)
   if (collapsible) {
     return (
-      <div className="glass-panel" style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Search campus..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '2.25rem', width: '100%', boxSizing: 'border-box', border: 'none', background: 'transparent', boxShadow: 'none' }}
-          />
-        </div>
-        
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 0.25rem' }} />
+      <>
+        {showMobileToggle && !isMobileExpanded && (
+          <button 
+            className="mobile-search-toggle" 
+            onClick={() => setIsMobileExpanded(true)}
+            style={{ display: 'none' }}
+          >
+            <Search size={24} />
+          </button>
+        )}
+        <div className={`glass-panel search-filter-content ${showMobileToggle && !isMobileExpanded ? 'collapsed' : ''}`} style={{ padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', position: 'relative' }}>
+          
+          {showMobileToggle && (
+            <button 
+              type="button"
+              className="mobile-close-search"
+              onClick={() => setIsMobileExpanded(false)}
+              style={{ display: 'none', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}
+            >
+              <X size={18} />
+            </button>
+          )}
+
+          <style>{`
+            @media (max-width: 768px) {
+              .mobile-close-search { display: block !important; }
+            }
+          `}</style>
+
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Search campus..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ paddingLeft: '2.25rem', width: '100%', boxSizing: 'border-box', border: 'none', background: 'transparent', boxShadow: 'none' }}
+            />
+          </div>
+          
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-color)', margin: '0 0.25rem' }} />
 
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button 
@@ -95,6 +125,17 @@ export default function SearchFilterBar({
                 </select>
               </div>
 
+              {showTypeFilter && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Type</label>
+                  <select className="form-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
+                    <option value="ALL">All Types</option>
+                    <option value="LOST">Lost Only</option>
+                    <option value="FOUND">Found Only</option>
+                  </select>
+                </div>
+              )}
+
               {userEmail && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                   <input type="checkbox" checked={myPostsOnly} onChange={(e) => setMyPostsOnly(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)' }} />
@@ -105,6 +146,7 @@ export default function SearchFilterBar({
           )}
         </div>
       </div>
+      </>
     );
   }
 

@@ -200,7 +200,7 @@ export default function CreatePost() {
           />
         </div>
 
-        <div style={{display: 'flex', gap: '1rem', width: '100%'}}>
+        <div className="form-row-mobile" style={{display: 'flex', gap: '1rem', width: '100%'}}>
           <div className="form-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
             <label className="form-label">When did you {formData.postType === 'LOST' ? 'lose' : 'find'} this item?</label>
             <input 
