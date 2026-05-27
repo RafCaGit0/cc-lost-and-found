@@ -100,8 +100,8 @@ Write one file per endpoint. Keep each function small and focused.
 ### 2.2 Pages / Views
 - [x] **Home / Feed:** List all posts, newest first. Toggle between FOUND and LOST tabs. Each card shows: title, location, status badge, image thumbnail, "Email Poster" button.
 - [x] **Create Post:** Form with postType toggle, title, description, location dropdown, status dropdown (FOUND only), optional image upload.
-- [ ] **Post Detail:** Full post view. Show all fields. "Email Poster" (`mailto:` link). Author + Admin see "Edit Status" and "Delete" buttons.
-- [ ] **Admin Panel:** List users, promote to admin. (Simple table, minimal UI.)
+- [x] **Post Detail:** Full post view. Show all fields. "Email Poster" (`mailto:` link). Author + Admin see "Edit Status" and "Delete" buttons.
+- [x] **Admin Panel:** List users, promote to admin. (Simple table, minimal UI.)
 
 ### 2.3 Campus Locations Dropdown
 Hardcode this list (add/remove as needed):
@@ -124,18 +124,18 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - [x] Connect GitHub repo to AWS Amplify Hosting (auto-deploy from `main`)
 - [x] Set environment variables in Amplify console (Cognito IDs, API URL)
 - [ ] Relocate the predefined location pins on campus to be more accurate!
-- [ ] End-to-end test all flows (A, B, C, D from spec)
-- [ ] Test pre-sign-up Lambda: attempt signup with `@gmail.com` → should be rejected
-- [ ] Implement admin functionality: Test admin promotion and admin-only delete, perhaps whole user management (or leave it as is and do this through AWS Console).
-- [ ] Add responsive design for mobile and desktop!
+- [x] End-to-end test all flows (A, B, C, D from spec)
+- [x] Test pre-sign-up Lambda: attempt signup with `@gmail.com` → should be rejected
+- [x] Implement admin functionality: Test admin promotion and admin-only panel.
+- [x] Add responsive design for mobile and desktop!
 
 ---
 
 ## Phase 4 — Stretch Goals (If Time Permits)
 
-- [ ] **Rekognition:** Lambda triggered on S3 upload → `detect_labels` → update DynamoDB item with `tags` field
+- [x] **Rekognition:** Lambda triggered on S3 upload → `detect_labels` → update DynamoDB item with `tags` field
 - [ ] **SES:** `resolve_item.py` sends email to `authorEmail` on resolve
-- [ ] **Search/Filter:** Add filter bar to Home feed (by location, postType, status)
+- [x] **Search/Filter:** Add filter bar to Home feed (by location, postType, status)
 - [ ] **S3 Lifecycle Rule:** Delete untagged objects older than 7 days to clean up orphaned uploads
 - [ ] Create own custom domain for app and email (e.g. @[EMAIL_ADDRESS])
 - [ ] Add other NYCU campuses to the map. Need coordinates, buttons to switch between campuses.
@@ -145,7 +145,7 @@ Gymnasium, Dormitory Area, Main Gate, Other
 ## Phase 5 — Post-Launch Hardening (MVP-Friendly)
 
 - [x] **Operational hygiene**: Confirm Amplify env vars are set (`VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_APP_CLIENT_ID`) and add a simple "health check" endpoint to verify API + auth.
-- [ ] **Abuse guardrails**: Add a soft image size cap in the client (e.g., 5–10MB) and show a friendly error; log oversize attempts server-side.
+- [x] **Abuse guardrails**: Add a soft image size cap in the client (e.g., 5–10MB) and show a friendly error; log oversize attempts server-side.
 - [ ] **Visibility & audit**: Log `sub` and email on write actions (create, resolve, delete) so you can trace misuse.
 - [ ] **Basic rate limiting**: Add an API Gateway usage plan or WAF rule with conservative limits (mostly click-ops, no code).
 - [ ] **Email privacy**: Replace mailto with a "contact requester" modal that reveals email only after user intent.
@@ -163,3 +163,12 @@ Gymnasium, Dormitory Area, Main Gate, Other
 - [x] **IAM Role Bloat**: `template.yaml` previously used a monolithic role. Broken down into specific SAM policies (`DynamoDBReadPolicy`, `DynamoDBCrudPolicy`, `S3WritePolicy`).
 - [x] **S3 Upload DOS**: `get_upload_url.py` migrated from `generate_presigned_url` (PUT) to `generate_presigned_post` (POST) to strictly enforce `content-length-range` up to 10MB at the AWS infrastructure level.
 - [ ] **Wildcard CORS Headers**: Currently lambdas return `Access-Control-Allow-Origin: *`. Replace this with specific production domain environment variables.
+
+# Finale
+- [ ] S3 lifecycle policy to clean up orphaned uploads (e.g., if user starts upload but never completes, or deletes item without deleting image or even delete image after 180 days to prevent infinite storage growth)
+- [ ] API gateeway usage limits to prevent abuse
+- Maybe
+  - [ ] Add email notifications via SES when item is resolved? (Stretch goal, not MVP)
+  - [ ] Add logging for tracing and debugging
+  - [ ] Add a health check endpoint for monitoring
+  - [ ] Add a custom domain and SSL certificate for production deployment
