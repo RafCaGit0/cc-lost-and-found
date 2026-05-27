@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User, ShieldAlert, LogOut, FileText } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
-export default function ProfileDropdown() {
+export default function ProfileDropdown({ onClose, centered = false }) {
   const { userEmail, isAdmin, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
@@ -24,6 +24,7 @@ export default function ProfileDropdown() {
 
   const handleLogout = () => {
     setOpen(false);
+    if (onClose) onClose();
     signOut();
   };
 
@@ -79,7 +80,7 @@ export default function ProfileDropdown() {
           className="dropdown-menu"
           style={{
             position: 'absolute',
-            right: 0,
+            ...(centered ? { left: '50%', transform: 'translateX(-50%)' } : { right: 0 }),
             top: 'calc(100% + 8px)',
             minWidth: '220px',
             zIndex: 200,
@@ -88,7 +89,7 @@ export default function ProfileDropdown() {
             boxShadow: 'var(--shadow-md)',
             border: '1px solid rgba(0,0,0,0.08)',
             overflow: 'hidden',
-            animation: 'fadeIn 0.15s ease-out',
+            animation: centered ? 'fadeInCentered 0.15s ease-out' : 'fadeIn 0.15s ease-out',
           }}
         >
           {/* User email */}
@@ -118,7 +119,7 @@ export default function ProfileDropdown() {
           <Link
             to="/feed?mine=true"
             className="dropdown-item"
-            onClick={() => setOpen(false)}
+            onClick={() => { setOpen(false); if (onClose) onClose(); }}
             style={itemStyle}
             onMouseEnter={(e) => handleItemHover(e, true)}
             onMouseLeave={(e) => handleItemHover(e, false)}
@@ -132,7 +133,7 @@ export default function ProfileDropdown() {
             <Link
               to="/admin"
               className="dropdown-item"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); if (onClose) onClose(); }}
               style={itemStyle}
               onMouseEnter={(e) => handleItemHover(e, true)}
               onMouseLeave={(e) => handleItemHover(e, false)}

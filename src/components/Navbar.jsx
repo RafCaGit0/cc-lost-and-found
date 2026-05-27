@@ -15,7 +15,7 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       {/* Brand */}
-      <Link to="/" className="nav-brand">
+      <Link to="/" className="nav-brand" onClick={() => setMobileOpen(false)}>
         <MapPin size={24} color="var(--color-accent)" />
         NYCU Lost &amp; Found
       </Link>
@@ -67,46 +67,24 @@ export default function Navbar() {
       {/* Mobile slide-in nav */}
       {mobileOpen && (
         <div
-          className="navbar-mobile-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.4)',
-            zIndex: 999,
-          }}
+          className="mobile-nav-overlay"
           onClick={() => setMobileOpen(false)}
         >
           <div
-            className="navbar-mobile-panel"
+            className="mobile-nav-panel"
             onClick={e => e.stopPropagation()}
-            style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '280px',
-              background: 'white',
-              padding: '2rem 1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.5rem',
-              boxShadow: 'var(--shadow-md)',
-              zIndex: 1000,
-            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '1.1rem' }}>
-                Menu
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--color-primary)', fontSize: '1.25rem' }}>
+                <MapPin size={24} color="var(--color-accent)" />
+                NYCU Lost &amp; Found
+              </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '0.2rem' }}
                 aria-label="Close menu"
               >
-                <X size={24} />
+                <X size={28} />
               </button>
             </div>
 
@@ -116,7 +94,6 @@ export default function Navbar() {
                 to={link.to}
                 className={`nav-link ${link.isActive ? 'active' : ''}`}
                 onClick={() => setMobileOpen(false)}
-                style={{ fontSize: '1.1rem', padding: '0.5rem 0' }}
               >
                 {link.label}
               </Link>
@@ -126,14 +103,14 @@ export default function Navbar() {
               to="/create"
               className="btn btn-primary"
               onClick={() => setMobileOpen(false)}
-              style={{ textDecoration: 'none', justifyContent: 'center', padding: '0.8rem' }}
+              style={{ textDecoration: 'none', justifyContent: 'center', padding: '1rem', fontSize: '1.1rem', marginTop: '1rem' }}
             >
-              <PlusCircle size={18} />
+              <PlusCircle size={20} />
               Report Item
             </Link>
 
-            <div style={{ marginTop: 'auto' }}>
-              <ProfileDropdown />
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+              <ProfileDropdown onClose={() => setMobileOpen(false)} centered={true} />
             </div>
           </div>
         </div>

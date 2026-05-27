@@ -83,7 +83,7 @@ export default function MapView() {
     <div className="fade-in" style={{ height: 'calc(100vh - 65px)', width: '100%', position: 'relative', background: '#f8fafc', overflow: 'hidden' }}>
       {/* Floating search bar */}
       <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%', maxWidth: '800px' }}>
-        <SearchFilterBar collapsible={true} />
+        <SearchFilterBar collapsible={true} showTypeFilter={true} showMobileToggle={true} />
       </div>
 
       {/* Loading overlay */}
