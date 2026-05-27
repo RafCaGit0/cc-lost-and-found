@@ -1180,38 +1180,61 @@ h1, h2, h3 {
   --amplify-colors-brand-primary-90: var(--color-primary-light);
   --amplify-colors-brand-primary-100: var(--color-primary);
   --amplify-components-authenticator-modal-background-color: transparent;
-  --amplify-components-authenticator-container-background-color: var(--bg-main);
-  --amplify-components-authenticator-router-box-shadow: var(--shadow-xl);
+  --amplify-components-authenticator-container-background-color: transparent;
+  --amplify-components-authenticator-router-box-shadow: none;
   --amplify-components-authenticator-router-border-width: 0;
   --amplify-radii-medium: var(--radius-lg);
   --amplify-components-tabs-item-active-border-color: var(--color-primary);
   --amplify-components-tabs-item-active-color: var(--color-primary);
   --amplify-components-button-primary-background-color: var(--color-primary);
   --amplify-components-button-primary-hover-background-color: var(--color-primary-light);
+  --amplify-components-fieldcontrol-focus-box-shadow: 0 0 0 2px rgba(0, 90, 156, 0.2);
   
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #dbeafe 100%);
+}
+
+/* Force the Amplify internal container to center */
+[data-amplify-authenticator] [data-amplify-container] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: auto;
 }
 
 .auth-header {
   text-align: center;
-  padding: 2.5rem 1rem 1rem;
+  padding: 1.5rem 1rem 0.5rem;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 90, 156, 0.12);
 }
 
 .auth-header h1 {
-  font-size: 2rem;
+  font-size: 1.75rem;
   color: var(--color-primary);
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
   letter-spacing: -0.5px;
 }
 
 .auth-header p {
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 0;
 }
 
 [data-amplify-authenticator] [data-amplify-router] {
@@ -1221,4 +1244,63 @@ h1, h2, h3 {
   border: 1px solid rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
+  max-width: 420px;
+  width: 100%;
+}
+
+/* Info box used in SignUp header and ConfirmSignUp */
+.auth-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 1.5rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: #1e40af;
+  line-height: 1.45;
+}
+
+.auth-info-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Password requirements shown in SignUp footer */
+.auth-pw-requirements {
+  margin: 0 1.5rem 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+}
+
+.auth-pw-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+.auth-pw-requirements ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.auth-confirm-header {
+  padding-top: 0.25rem;
+}
+
+/* Make validation errors render as multi-line lists */
+[data-amplify-authenticator] .amplify-field__error-message {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 0.8rem;
 }
