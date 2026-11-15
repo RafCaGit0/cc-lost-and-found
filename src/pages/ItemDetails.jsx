@@ -237,7 +237,7 @@ export default function ItemDetails() {
           <div style={{ ...blockStyle, padding: 0, overflow: 'hidden', height: '300px' }}>
             <MapContainer center={pos} zoom={17} maxZoom={19} style={{ height: '100%', width: '100%', zIndex: 1 }}>
               <MapResizer />
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+              <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' maxZoom={19} />
               <Marker position={pos} icon={createItemIcon(item)} />
             </MapContainer>
           </div>
