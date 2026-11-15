@@ -13,6 +13,7 @@ Built independently as a cloud computing project during an exchange semester in 
 - **University-Restricted Auth** — Only `@nycu.edu.tw` email addresses can register (Cognito pre-signup validation)
 - **Admin Moderation** — Role-based access control with user promotion and content management
 - **Item Resolution** — Mark items as resolved when returned to their owner
+- **Responsiveness** — Optimized for both desktop and mobile versions
 
 ## Architecture
 
@@ -30,6 +31,9 @@ AWS Lambda (Python 3.12, one function per endpoint)
     ├── Cognito (auth, user groups)
     └── Rekognition (image label detection)
 ```
+
+<img width="1624" height="990" alt="image" src="https://github.com/user-attachments/assets/b867b5a2-9529-4a66-babb-654e6f998ad2" />
+
 
 All backend infrastructure is defined as Infrastructure as Code using **AWS SAM / CloudFormation** (`template.yaml`).
 
