@@ -225,7 +225,7 @@ export default function EditPost() {
           <label className="form-label">Exact Location Pin (Optional)</label>
           <div style={{height: '250px', width: '100%', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', zIndex: 0, position: 'relative'}}>
             <MapContainer center={position || CAMPUS_CENTER} zoom={CAMPUS_ZOOM} style={{height: '100%', width: '100%'}}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+              <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' maxZoom={19} />
               <LocationPickerMap position={position} setPosition={setPosition} formData={formData} />
               <MapResizer />
             </MapContainer>

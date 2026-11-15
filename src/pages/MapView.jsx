@@ -104,7 +104,7 @@ export default function MapView() {
       <MapContainer center={CAMPUS_CENTER} zoom={CAMPUS_ZOOM} maxZoom={19} style={{ height: '100%', width: '100%', zIndex: 1 }}>
         <MapResizer />
         <MapFocus targetLat={targetLat} targetLng={targetLng} />
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" maxZoom={19} />
+        <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' maxZoom={19} />
         {visibleItems.map(item => {
           const pos = (item.lat && item.lng)
             ? [item.lat, item.lng]
